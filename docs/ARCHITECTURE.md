@@ -109,27 +109,36 @@ from dataclasses import dataclass, field
 from typing import Any
 import uuid
 
+
 def _new_id() -> str:
     return str(uuid.uuid4())
 
+
 @dataclass
 class BronzeRecord:
-    id: str = field(default_factory=_new_id)   # identificador próprio -- necessário para rastreabilidade
+    id: str = field(
+        default_factory=_new_id
+    )  # identificador próprio -- necessário para rastreabilidade
     source: str = ""
     raw_content: Any = None
     metadata: dict = field(default_factory=dict)
 
+
 @dataclass
 class SilverRecord:
-    id: str = field(default_factory=_new_id)   # identificador próprio do silver (distinto do bronze_ref)
-    bronze_ref: str = ""                       # referência ao BronzeRecord.id de origem
+    id: str = field(
+        default_factory=_new_id
+    )  # identificador próprio do silver (distinto do bronze_ref)
+    bronze_ref: str = ""  # referência ao BronzeRecord.id de origem
     transformed_content: Any = None
     metadata: dict = field(default_factory=dict)
+
 
 @dataclass
 class SupervisorVerdict:
     approved: bool
     details: list[str]
+
 
 @dataclass
 class EvalResult:
@@ -137,13 +146,15 @@ class EvalResult:
     passed: bool
     breakdown: dict[str, float]
 
+
 @dataclass
 class AuditRecord:
     """O que é gravado na tabela de auditoria quando a Task 3 reprova um lote."""
-    silver_ref: str                   # referência ao SilverRecord.id que foi rejeitado
-    reason: dict[str, float]          # breakdown do EvalResult que causou a reprovação
-    rejected_at: str                  # timestamp ISO 8601
-    raw_content: Any                  # conteúdo original, para permitir reprocessamento manual
+
+    silver_ref: str  # referência ao SilverRecord.id que foi rejeitado
+    reason: dict[str, float]  # breakdown do EvalResult que causou a reprovação
+    rejected_at: str  # timestamp ISO 8601
+    raw_content: Any  # conteúdo original, para permitir reprocessamento manual
     metadata: dict = field(default_factory=dict)
 ```
 
@@ -160,18 +171,24 @@ from typing import Callable
 METRIC_REGISTRY: dict[str, Callable] = {}
 PROVIDER_REGISTRY: dict[str, Callable] = {}
 
+
 def register_metric(name: str):
     """Decorator: registra uma função de métrica pelo nome usado no config.yaml."""
+
     def wrapper(fn: Callable) -> Callable:
         METRIC_REGISTRY[name] = fn
         return fn
+
     return wrapper
+
 
 def register_provider(name: str):
     """Decorator: registra um client/factory de LLM provider pelo nome usado no config.yaml."""
+
     def wrapper(fn: Callable) -> Callable:
         PROVIDER_REGISTRY[name] = fn
         return fn
+
     return wrapper
 ```
 
@@ -179,13 +196,13 @@ def register_provider(name: str):
 # core/harness/metrics.py (exemplo de uso do registry)
 from core.registry import register_metric
 
+
 @register_metric("faithfulness_to_source")
-def faithfulness_to_source(sample: list) -> float:
-    ...
+def faithfulness_to_source(sample: list) -> float: ...
+
 
 @register_metric("chunk_size_valid")
-def chunk_size_valid(sample: list) -> float:
-    ...
+def chunk_size_valid(sample: list) -> float: ...
 ```
 
 O `dag_factory.py` (Task de orquestração) lê `config.yaml`, busca cada nome no `METRIC_REGISTRY`/`PROVIDER_REGISTRY`, e monta o `Harness` já com as funções reais resolvidas — o `config.yaml` nunca precisa saber onde a função vive, só o nome dela.
@@ -195,11 +212,13 @@ O `dag_factory.py` (Task de orquestração) lê `config.yaml`, busca cada nome n
 from abc import ABC, abstractmethod
 from core.contracts import BronzeRecord, SupervisorVerdict
 
+
 class ExtractSpecialist(ABC):
     """Cada projeto implementa isso com sua lógica de extração específica."""
+
     @abstractmethod
-    def extract(self) -> BronzeRecord:
-        ...
+    def extract(self) -> BronzeRecord: ...
+
 
 class ExtractSupervisor:
     """
@@ -207,7 +226,13 @@ class ExtractSupervisor:
     mas os LIMIARES vêm de config.yaml (cada fonte pode ter regras diferentes:
     'atualizado' significa algo distinto para um PDF normativo e para um CSV mensal).
     """
-    def __init__(self, schema_rules: dict, completeness_min_ratio: float, freshness_max_hours: int):
+
+    def __init__(
+        self,
+        schema_rules: dict,
+        completeness_min_ratio: float,
+        freshness_max_hours: int,
+    ):
         self.schema_rules = schema_rules
         self.completeness_min_ratio = completeness_min_ratio
         self.freshness_max_hours = freshness_max_hours
@@ -233,20 +258,24 @@ class ExtractSupervisor:
 from abc import ABC, abstractmethod
 from core.contracts import BronzeRecord, SilverRecord, SupervisorVerdict
 
+
 class TransformSpecialist(ABC):
     """Cada projeto implementa a lógica de transformação (pode envolver LLM)."""
+
     @abstractmethod
-    def transform(self, record: BronzeRecord) -> SilverRecord:
-        ...
+    def transform(self, record: BronzeRecord) -> SilverRecord: ...
+
 
 class TransformSupervisor(ABC):
     """
     Agente LLM -- avalia fidelidade e qualidade semântica da transformação.
     Cada projeto pode customizar o prompt de avaliação, mas a interface é fixa.
     """
+
     @abstractmethod
-    def review(self, bronze: BronzeRecord, silver: SilverRecord) -> SupervisorVerdict:
-        ...
+    def review(
+        self, bronze: BronzeRecord, silver: SilverRecord
+    ) -> SupervisorVerdict: ...
 ```
 
 ```python
@@ -255,12 +284,14 @@ import random
 from typing import Callable
 from core.contracts import SilverRecord, EvalResult
 
+
 class Harness:
     """
     Genérico -- recebe métricas configuráveis via config.yaml e AMOSTRA a população
     de silver records recebida, usando sample_size/sample_strategy do config
     (não avalia a população inteira -- isso é decisão explícita de custo/performance).
     """
+
     def __init__(
         self,
         metrics: dict[str, Callable[[list[SilverRecord]], float]],
@@ -278,13 +309,17 @@ class Harness:
             return population
         if self.sample_strategy == "random":
             return random.sample(population, self.sample_size)
-        raise NotImplementedError(f"Estratégia de amostragem '{self.sample_strategy}' não implementada")
+        raise NotImplementedError(
+            f"Estratégia de amostragem '{self.sample_strategy}' não implementada"
+        )
 
     def evaluate(self, population: list[SilverRecord]) -> EvalResult:
         sample = self._sample(population)
         breakdown = {name: fn(sample) for name, fn in self.metrics.items()}
         final_score = sum(breakdown.values()) / len(breakdown)
-        return EvalResult(score=final_score, passed=final_score >= self.threshold, breakdown=breakdown)
+        return EvalResult(
+            score=final_score, passed=final_score >= self.threshold, breakdown=breakdown
+        )
 ```
 
 ```python
@@ -292,8 +327,10 @@ class Harness:
 from datetime import datetime, timezone
 from core.contracts import EvalResult, SilverRecord, AuditRecord
 
+
 class LoadGate:
     """100% genérico -- só decide o destino com base no resultado do Harness."""
+
     def __init__(self, gold_writer: Callable, audit_writer: Callable):
         self.gold_writer = gold_writer
         self.audit_writer = audit_writer

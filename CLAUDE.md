@@ -142,6 +142,9 @@ touch core/.gitkeep projects/ai-energy-data-project/.gitkeep
 
 # criar o .env real a partir do exemplo (nunca commitar o .env preenchido)
 cp .env.example .env
+
+# instala as dependências do pyproject.toml/uv.lock em .venv/
+uv sync
 ```
 
 O `.gitignore` da raiz já cobre `.env`, artefatos de Python/uv, dados temporários (`data/tmp/`, `data/raw/`), estado local do Astro CLI e de notebooks — conferir que está presente antes do primeiro commit.

@@ -33,8 +33,7 @@ Each project under `projects/<name>/` has its own README/architecture doc descri
 git clone <repo-url>
 cd data-agent-team
 cp .env.example .env   # fill in your own credentials, never commit this file
-uv venv
-uv pip install -r requirements.txt
+uv sync
 ```
 
 See `docs/ARCHITECTURE.md` for the full implementation roadmap.
