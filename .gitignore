@@ -27,3 +27,6 @@ logs/
 .vscode/
 .idea/
 .DS_Store
+
+# Claude Code (estado local da sessão)
+.claude/
