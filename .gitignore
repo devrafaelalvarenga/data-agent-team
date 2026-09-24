@@ -1,0 +1,29 @@
+# Segredos -- NUNCA commitar
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# uv
+.uv/
+
+# Dados baixados/temporários (bronze local, se houver)
+data/tmp/
+data/raw/
+
+# Airflow / Astro CLI
+.astro/
+airflow_settings.yaml
+logs/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Editor
+.vscode/
+.idea/
+.DS_Store
