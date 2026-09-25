@@ -3,6 +3,22 @@
 Registro de mudanças relevantes no framework e nos projetos. Ver histórico
 completo de commits com `git log` para detalhes granulares.
 
+## 25/09/2026 (7)
+
+- `dags/ai_energy_data_project.py`: adiciona `_build_aneel_dag(source_name)`,
+  genérico para `aneel_drp_drc_parquet` e `aneel_dec_fec_parquet` -- monta a
+  pipeline completa (Extract→Transform→Harness→Load) igual foi feito para
+  `prodist_pdf`. As 3 DAGs agora vivem no mesmo arquivo.
+- `config.yaml`: completa as seções `harness`/`load` das duas fontes ANEEL.
+  Métricas do harness ficam sem `chunk_size_valid` (não há conceito de
+  "chunk" em dado tabular -- a métrica sempre daria 0.0 à toa).
+  `sample_size: 1` porque hoje cada execução produz um único `SilverRecord`
+  (a tabela inteira).
+- `AneelTabularTransformSpecialist` passa a declarar
+  `metadata["expected_metadata_fields"]` para a métrica `metadata_extracted`
+  do harness fazer sentido (antes checaria contra o default genérico
+  `chunking_strategy`/`chunk_count`, que não se aplica a dado tabular).
+
 ## 25/09/2026 (6)
 
 - Decide e implementa o Transform das fontes ANEEL (DRP/DRC, DEC/FEC):

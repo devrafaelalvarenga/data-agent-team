@@ -2,8 +2,7 @@
 # Ver docs/ARCHITECTURE.md ("Exemplo de config.yaml por projeto") e
 # projects/ai-energy-data-project/docs/architecture.md (decisões específicas).
 #
-# Só a pipeline de prodist_pdf tem DAG (as 4 Tasks + orquestração). As fontes
-# ANEEL têm Extract e Transform implementados, mas ainda sem DAG própria.
+# As 3 fontes têm DAG completa (Extract -> Transform -> Harness -> Load).
 #
 # Fontes ANEEL em Parquet (não CSV): schema tipado embutido -- schema_rules
 # do supervisor não precisa mais declarar tipo de coluna manualmente -- e
@@ -76,7 +75,34 @@ harness:
       - metadata_extracted
     threshold: 0.8
 
+  # chunk_size_valid não entra aqui -- não há conceito de "chunk" em dado
+  # tabular; SilverRecord.metadata não tem chunk_sizes, então a métrica
+  # sempre daria 0.0 e puxaria a nota pra baixo à toa.
+  aneel_drp_drc_parquet:
+    sample_size: 1 # hoje o bronze inteiro é 1 registro (tabela completa) por execução
+    sample_strategy: random
+    metrics:
+      - faithfulness_to_source
+      - metadata_extracted
+    threshold: 0.8
+
+  aneel_dec_fec_parquet:
+    sample_size: 1
+    sample_strategy: random
+    metrics:
+      - faithfulness_to_source
+      - metadata_extracted
+    threshold: 0.8
+
 load:
   prodist_pdf:
+    gold_destination: "bigquery.energy_quality.gold"
+    audit_destination: "bigquery.energy_quality.audit"
+
+  aneel_drp_drc_parquet:
+    gold_destination: "bigquery.energy_quality.gold"
+    audit_destination: "bigquery.energy_quality.audit"
+
+  aneel_dec_fec_parquet:
     gold_destination: "bigquery.energy_quality.gold"
     audit_destination: "bigquery.energy_quality.audit"

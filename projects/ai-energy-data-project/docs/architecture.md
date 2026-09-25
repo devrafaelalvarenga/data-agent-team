@@ -7,9 +7,12 @@ documento cobre só decisões específicas deste projeto.
 
 | Fonte | Extract | Transform | Harness/Load | DAG |
 |---|---|---|---|---|
-| `prodist_pdf` | ✅ `ProdistPdfExtractSpecialist` | ✅ `PdistChunkingTransformSpecialist` + `PdistFidelityTransformSupervisor` (LLM) | ✅ genérico (`core/harness`, `core/load`) | ✅ `dags/ai_energy_data_project.py` |
-| `aneel_drp_drc_parquet` | ✅ `AneelParquetExtractSpecialist` | ✅ `AneelTabularTransformSpecialist` + `AneelTabularTransformSupervisor` (determinístico) | ✅ genérico, config pendente de wiring numa DAG | ❌ pendente |
-| `aneel_dec_fec_parquet` | ✅ `AneelParquetExtractSpecialist` | ✅ `AneelTabularTransformSpecialist` + `AneelTabularTransformSupervisor` (determinístico) | ✅ genérico, config pendente de wiring numa DAG | ❌ pendente |
+| `prodist_pdf` | ✅ `ProdistPdfExtractSpecialist` | ✅ `PdistChunkingTransformSpecialist` + `PdistFidelityTransformSupervisor` (LLM) | ✅ genérico (`core/harness`, `core/load`) | ✅ `ai_energy_prodist_pipeline` |
+| `aneel_drp_drc_parquet` | ✅ `AneelParquetExtractSpecialist` | ✅ `AneelTabularTransformSpecialist` + `AneelTabularTransformSupervisor` (determinístico) | ✅ genérico | ✅ `ai_energy_aneel_drp_drc_parquet_pipeline` |
+| `aneel_dec_fec_parquet` | ✅ `AneelParquetExtractSpecialist` | ✅ `AneelTabularTransformSpecialist` + `AneelTabularTransformSupervisor` (determinístico) | ✅ genérico | ✅ `ai_energy_aneel_dec_fec_parquet_pipeline` |
+
+Todas as 3 DAGs vivem em `dags/ai_energy_data_project.py` (`_build_prodist_dag` +
+`_build_aneel_dag`, genérico para as duas fontes tabulares).
 
 ## Extract das fontes ANEEL: Parquet, não CSV
 
@@ -41,6 +44,18 @@ Se no futuro aparecer um caso real de julgamento semântico (ex.: detectar
 padrão anômalo que exija interpretação, não só validação de domínio), dá
 para trocar por um `TransformSupervisor` LLM sem quebrar a interface.
 
+## Harness das fontes ANEEL: sem `chunk_size_valid`, `sample_size: 1`
+
+`chunk_size_valid` não entra nas métricas de `aneel_drp_drc_parquet`/
+`aneel_dec_fec_parquet`: não há conceito de "chunk" em dado tabular, e
+`AneelTabularTransformSpecialist` não popula `metadata["chunk_sizes"]` --
+incluir a métrica só puxaria a nota pra 0 à toa. Fica só
+`faithfulness_to_source` (agrega `transform_approved`) e
+`metadata_extracted` (valida contra `expected_metadata_fields`, que o
+specialist já declara). `sample_size: 1` porque hoje o Bronze inteiro (a
+tabela completa) é um único `SilverRecord` por execução -- reavaliar se um
+dia o pipeline passar a processar linha a linha.
+
 ## Resource escolhido para DEC/FEC
 
 `indicadores-continuidade-coletivos-2020-2029.parquet` (série histórica de
@@ -62,4 +77,6 @@ Nada neste projeto foi validado contra rede real ou contra o Airflow real
 rodando: o ambiente de desenvolvimento usado não tinha acesso de rede via
 `requests` no sandbox de execução, nem Docker rodando para `astro dev start`.
 Primeira validação real de ponta a ponta: rodar `astro dev start` com Docker
-ativo e observar a DAG `ai_energy_prodist_pipeline` na UI do Airflow.
+ativo e observar as 3 DAGs (`ai_energy_prodist_pipeline`,
+`ai_energy_aneel_drp_drc_parquet_pipeline`,
+`ai_energy_aneel_dec_fec_parquet_pipeline`) na UI do Airflow.

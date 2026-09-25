@@ -148,7 +148,11 @@ def test_aneel_tabular_transform_packages_rows_as_is():
 
     assert silver.bronze_ref == bronze.id
     assert silver.transformed_content == _ANEEL_ROWS
-    assert silver.metadata == {"row_count": 2, "completeness_ratio": 1.0}
+    assert silver.metadata == {
+        "row_count": 2,
+        "completeness_ratio": 1.0,
+        "expected_metadata_fields": ["row_count", "completeness_ratio"],
+    }
 
 
 def test_aneel_tabular_transform_handles_empty_rows():

@@ -139,6 +139,9 @@ class AneelTabularTransformSpecialist(TransformSpecialist):
             metadata={
                 "row_count": len(rows),
                 "completeness_ratio": record.metadata.get("completeness_ratio", 0.0),
+                # convenção do core/harness/metrics.py (metadata_extracted) --
+                # aqui só os campos que este specialist realmente popula.
+                "expected_metadata_fields": ["row_count", "completeness_ratio"],
             },
         )
 
