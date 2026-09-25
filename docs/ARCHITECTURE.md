@@ -17,7 +17,7 @@ Nem toda etapa do pipeline deve ser um agente LLM. Chamadas de LLM têm custo, l
 - **Python determinístico**: tarefas com critério objetivo e verificável (schema, contagem, completude, threshold numérico)
 - **Agente LLM**: tarefas que exigem julgamento semântico (fidelidade de um chunk à fonte, qualidade de uma extração estruturada a partir de texto livre)
 
-Essa distinção é aplicada explicitamente em cada uma das 4 tasks abaixo — não é opcional, é regra de arquitetura.
+Essa distinção é aplicada explicitamente em cada uma das 4 tasks abaixo — não é opcional, é regra de arquitetura. Isso vale mesmo para a Task 2: `TransformSupervisor` é tipicamente um agente LLM, mas quando uma fonte específica não tem ambiguidade nenhuma a resolver (ex.: dado tabular já tipado, sem texto livre — ver `AneelTabularTransformSupervisor` em `projects/ai-energy-data-project/transform_impl.py`), o projeto implementa a interface de forma 100% determinística. Forçar LLM por "uniformidade entre fontes" seria violar esta mesma regra.
 
 ## As 4 Tasks
 
@@ -69,7 +69,7 @@ data-agent-team/
 │   ├── extract/
 │   │   └── base.py                    # ExtractSpecialist (ABC) + ExtractSupervisor (genérico, configurável)
 │   ├── transform/
-│   │   └── base.py                    # TransformSpecialist (ABC) + TransformSupervisor (ABC, LLM)
+│   │   └── base.py                    # TransformSpecialist (ABC) + TransformSupervisor (ABC, tipicamente LLM)
 │   ├── harness/
 │   │   ├── base.py                    # Harness genérico: recebe métricas configuráveis
 │   │   └── metrics.py                 # implementações de métrica, registradas via @register_metric

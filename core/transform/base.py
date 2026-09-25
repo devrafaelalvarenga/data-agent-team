@@ -16,13 +16,22 @@ class TransformSpecialist(ABC):
 
 
 class TransformSupervisor(ABC):
-    """Agente LLM -- avalia fidelidade e qualidade semântica da transformação.
+    """Tipicamente um agente LLM -- avalia fidelidade e qualidade semântica da
+    transformação, quando há julgamento semântico real a fazer (ex.: decidir
+    o que é ruído de PDF vs. conteúdo normativo). A regra não-negociável do
+    framework é "LLM só onde há julgamento semântico real" -- se uma fonte
+    específica não tem ambiguidade nenhuma para resolver (ex.: dado tabular
+    já tipado, sem texto livre), o projeto pode implementar este supervisor
+    de forma 100% determinística (ver
+    `projects/ai-energy-data-project/transform_impl.py`,
+    `AneelTabularTransformSupervisor`) -- a interface continua a mesma para
+    que o Harness (Task 3) trate qualquer TransformSupervisor de forma
+    uniforme, LLM ou não.
 
-    Diferente do ExtractSupervisor (determinístico e genérico), aqui não há uma
-    lógica de checagem reutilizável entre projetos: o julgamento é semântico e
-    depende da fonte/transformação específica. Cada projeto implementa seu
-    próprio prompt de avaliação; a interface é fixa para que o Harness (Task 3)
-    possa tratar qualquer TransformSupervisor de forma uniforme.
+    Diferente do ExtractSupervisor, não há uma lógica de checagem genérica
+    reutilizável entre projetos aqui: cada projeto implementa a lógica (via
+    prompt de LLM ou checagem determinística) de acordo com o que a fonte
+    realmente precisa.
     """
 
     @abstractmethod

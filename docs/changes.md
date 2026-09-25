@@ -3,6 +3,22 @@
 Registro de mudanças relevantes no framework e nos projetos. Ver histórico
 completo de commits com `git log` para detalhes granulares.
 
+## 25/09/2026 (6)
+
+- Decide e implementa o Transform das fontes ANEEL (DRP/DRC, DEC/FEC):
+  **determinístico, sem LLM** (`AneelTabularTransformSpecialist` +
+  `AneelTabularTransformSupervisor` em `transform_impl.py`) -- dado tabular
+  já tipado via Parquet, sem ambiguidade textual, então não há julgamento
+  semântico real a fazer (regra não-negociável do framework). Supervisor
+  checa `linhas_preservadas`, `schema_consistente` e, se configurado,
+  `colunas_esperadas` (ainda vazio em `config.yaml` -- schema real do
+  parquet nunca foi inspecionado contra dado ao vivo).
+- `core/transform/base.py` e `docs/ARCHITECTURE.md`: docstring/regra
+  atualizados para deixar explícito que `TransformSupervisor` é
+  *tipicamente* LLM, mas pode ser determinístico quando a fonte não tem
+  julgamento semântico real a fazer -- forçar LLM por uniformidade violaria
+  a própria regra.
+
 ## 25/09/2026 (5)
 
 - Troca `AneelCsvExtractSpecialist` por `AneelParquetExtractSpecialist`

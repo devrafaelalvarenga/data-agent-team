@@ -8,7 +8,7 @@ import importlib.util
 import pathlib
 from unittest.mock import MagicMock, patch
 
-from core.contracts import BronzeRecord, SilverRecord
+from core.contracts import BronzeRecord, SilverRecord, SupervisorVerdict
 
 _MODULE_PATH = (
     pathlib.Path(__file__).resolve().parents[3]
@@ -22,6 +22,8 @@ _spec.loader.exec_module(transform_impl)
 
 PdistChunkingTransformSpecialist = transform_impl.PdistChunkingTransformSpecialist
 PdistFidelityTransformSupervisor = transform_impl.PdistFidelityTransformSupervisor
+AneelTabularTransformSpecialist = transform_impl.AneelTabularTransformSpecialist
+AneelTabularTransformSupervisor = transform_impl.AneelTabularTransformSupervisor
 
 _SAMPLE_TEXT = (
     "8.1 Introdução\n"
@@ -124,3 +126,101 @@ def test_review_approves_empty_chunk_list():
     verdict = supervisor.review(BronzeRecord(), SilverRecord(transformed_content=[]))
     assert verdict.approved
     assert verdict.details == []
+
+
+# --- AneelTabularTransformSpecialist / AneelTabularTransformSupervisor ---
+
+_ANEEL_ROWS = [
+    {"conjunto": "ABC", "drp": 1.5},
+    {"conjunto": "DEF", "drp": 0.8},
+]
+
+
+def test_aneel_tabular_transform_packages_rows_as_is():
+    specialist = AneelTabularTransformSpecialist(source_name="aneel_drp_drc_parquet")
+    bronze = BronzeRecord(
+        source="aneel_drp_drc_parquet",
+        raw_content=_ANEEL_ROWS,
+        metadata={"completeness_ratio": 1.0},
+    )
+
+    silver = specialist.transform(bronze)
+
+    assert silver.bronze_ref == bronze.id
+    assert silver.transformed_content == _ANEEL_ROWS
+    assert silver.metadata == {"row_count": 2, "completeness_ratio": 1.0}
+
+
+def test_aneel_tabular_transform_handles_empty_rows():
+    specialist = AneelTabularTransformSpecialist(source_name="aneel_dec_fec_parquet")
+    bronze = BronzeRecord(raw_content=[], metadata={"completeness_ratio": 0.0})
+
+    silver = specialist.transform(bronze)
+
+    assert silver.transformed_content == []
+    assert silver.metadata["row_count"] == 0
+
+
+def test_aneel_tabular_review_approves_when_rows_preserved_and_consistent():
+    bronze = BronzeRecord(raw_content=_ANEEL_ROWS)
+    silver = SilverRecord(transformed_content=_ANEEL_ROWS)
+
+    verdict = AneelTabularTransformSupervisor().review(bronze, silver)
+
+    assert verdict == SupervisorVerdict(approved=True, details=[])
+
+
+def test_aneel_tabular_review_fails_when_row_count_differs():
+    bronze = BronzeRecord(raw_content=_ANEEL_ROWS)
+    silver = SilverRecord(transformed_content=_ANEEL_ROWS[:1])
+
+    verdict = AneelTabularTransformSupervisor().review(bronze, silver)
+
+    assert not verdict.approved
+    assert "linhas_preservadas" in verdict.details
+
+
+def test_aneel_tabular_review_fails_when_schema_inconsistent():
+    bronze = BronzeRecord(raw_content=_ANEEL_ROWS)
+    inconsistent = [_ANEEL_ROWS[0], {"conjunto": "DEF"}]  # falta a coluna "drp"
+    silver = SilverRecord(transformed_content=inconsistent)
+
+    verdict = AneelTabularTransformSupervisor().review(bronze, silver)
+
+    assert not verdict.approved
+    assert "schema_consistente" in verdict.details
+
+
+def test_aneel_tabular_review_skips_expected_columns_check_when_not_configured():
+    bronze = BronzeRecord(raw_content=_ANEEL_ROWS)
+    silver = SilverRecord(transformed_content=_ANEEL_ROWS)
+
+    verdict = AneelTabularTransformSupervisor(expected_columns=None).review(
+        bronze, silver
+    )
+
+    assert verdict.approved
+
+
+def test_aneel_tabular_review_checks_expected_columns_when_configured():
+    bronze = BronzeRecord(raw_content=_ANEEL_ROWS)
+    silver = SilverRecord(transformed_content=_ANEEL_ROWS)
+    supervisor = AneelTabularTransformSupervisor(
+        expected_columns=["conjunto", "drp", "fec"]
+    )
+
+    verdict = supervisor.review(bronze, silver)
+
+    assert not verdict.approved
+    assert "colunas_esperadas" in verdict.details
+
+
+def test_aneel_tabular_review_fails_closed_on_expected_columns_with_no_rows():
+    bronze = BronzeRecord(raw_content=[])
+    silver = SilverRecord(transformed_content=[])
+    supervisor = AneelTabularTransformSupervisor(expected_columns=["conjunto"])
+
+    verdict = supervisor.review(bronze, silver)
+
+    assert not verdict.approved
+    assert "colunas_esperadas" in verdict.details

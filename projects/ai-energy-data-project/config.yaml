@@ -2,13 +2,13 @@
 # Ver docs/ARCHITECTURE.md ("Exemplo de config.yaml por projeto") e
 # projects/ai-energy-data-project/docs/architecture.md (decisões específicas).
 #
-# Só a pipeline de prodist_pdf está completa (as 4 Tasks implementadas).
-# aneel_drp_drc_parquet e aneel_dec_fec_parquet têm Extract pronto, mas ainda
-# não têm TransformSpecialist -- ver docs/architecture.md deste projeto.
+# Só a pipeline de prodist_pdf tem DAG (as 4 Tasks + orquestração). As fontes
+# ANEEL têm Extract e Transform implementados, mas ainda sem DAG própria.
 #
 # Fontes ANEEL em Parquet (não CSV): schema tipado embutido -- schema_rules
 # do supervisor não precisa mais declarar tipo de coluna manualmente -- e
-# carga nativa mais eficiente no BigQuery.
+# carga nativa mais eficiente no BigQuery. Transform delas é determinístico
+# (sem LLM) -- decisão documentada em docs/architecture.md deste projeto.
 
 project_name: ai-energy-data-project
 
@@ -55,6 +55,16 @@ transform:
     llm_model: gemini-flash-latest
     silver_destination: "bigquery.energy_quality.silver_prodist_chunks"
     silver_vector_destination: "chroma://local/prodist_chunks"
+
+  aneel_drp_drc_parquet:
+    deterministic: true # sem LLM -- ver AneelTabularTransformSpecialist
+    expected_columns: [] # preencher depois de inspecionar o schema real do resource ao vivo
+    silver_destination: "bigquery.energy_quality.silver_drp_drc"
+
+  aneel_dec_fec_parquet:
+    deterministic: true # sem LLM -- ver AneelTabularTransformSpecialist
+    expected_columns: [] # preencher depois de inspecionar o schema real do resource ao vivo
+    silver_destination: "bigquery.energy_quality.silver_dec_fec"
 
 harness:
   prodist_pdf:

@@ -7,9 +7,9 @@ documento cobre só decisões específicas deste projeto.
 
 | Fonte | Extract | Transform | Harness/Load | DAG |
 |---|---|---|---|---|
-| `prodist_pdf` | ✅ `ProdistPdfExtractSpecialist` | ✅ `PdistChunkingTransformSpecialist` + `PdistFidelityTransformSupervisor` | ✅ genérico (`core/harness`, `core/load`) | ✅ `dags/ai_energy_data_project.py` |
-| `aneel_drp_drc_parquet` | ✅ `AneelParquetExtractSpecialist` | ❌ pendente | -- | ❌ pendente |
-| `aneel_dec_fec_parquet` | ✅ `AneelParquetExtractSpecialist` | ❌ pendente | -- | ❌ pendente |
+| `prodist_pdf` | ✅ `ProdistPdfExtractSpecialist` | ✅ `PdistChunkingTransformSpecialist` + `PdistFidelityTransformSupervisor` (LLM) | ✅ genérico (`core/harness`, `core/load`) | ✅ `dags/ai_energy_data_project.py` |
+| `aneel_drp_drc_parquet` | ✅ `AneelParquetExtractSpecialist` | ✅ `AneelTabularTransformSpecialist` + `AneelTabularTransformSupervisor` (determinístico) | ✅ genérico, config pendente de wiring numa DAG | ❌ pendente |
+| `aneel_dec_fec_parquet` | ✅ `AneelParquetExtractSpecialist` | ✅ `AneelTabularTransformSpecialist` + `AneelTabularTransformSupervisor` (determinístico) | ✅ genérico, config pendente de wiring numa DAG | ❌ pendente |
 
 ## Extract das fontes ANEEL: Parquet, não CSV
 
@@ -20,28 +20,26 @@ precisa mais declarar tipo de coluna manualmente em `schema_rules` do
 converte colunas de data/decimal do parquet para ISO string/float, já que
 não são JSON-safe por padrão e `raw_content` precisa trafegar via XCom.
 
-## Pendência: Transform das fontes ANEEL (DRP/DRC, DEC/FEC)
+## Decisão: Transform das fontes ANEEL (DRP/DRC, DEC/FEC) é determinístico
 
-As duas fontes ainda não têm `TransformSpecialist`. Decisão a tomar antes de
-implementar a DAG delas: dado tabular sem ambiguidade textual pode não
-precisar de julgamento semântico de LLM na Task 2 (diferente do PDF do
-PRODIST, que envolve limpar texto extraído e decidir o que é ruído de PDF vs.
-conteúdo normativo). Duas opções:
+Decidido em 25/09/2026: **determinístico, sem LLM**
+(`AneelTabularTransformSpecialist`/`AneelTabularTransformSupervisor` em
+`transform_impl.py`). Dado tabular já vem tipado do Parquet (ver Extract
+acima), sem ambiguidade textual -- não há julgamento semântico real a fazer.
+A regra não-negociável do framework é "LLM só onde há julgamento semântico
+real"; forçar LLM aqui (só para manter uniformidade com o PDF do PRODIST)
+contradiria o próprio princípio.
 
-1. **Transform determinístico** (Python puro: valida schema, calcula
-   `completeness_ratio`, estrutura em `SilverRecord`) -- mais simples, mais
-   barato, mas quebraria a regra "Task 2 sempre tem LLM" do `docs/ARCHITECTURE.md`
-   se essa regra for lida literalmente. Argumento a favor: a regra
-   não-negociável do projeto é "LLM só onde há julgamento semântico real" --
-   se não há julgamento semântico real num dado tabular já estruturado (e
-   agora já tipado via Parquet), forçar LLM aqui contradiria o próprio
-   princípio.
-2. **Transform com LLM mesmo assim**, para manter uniformidade entre fontes e
-   cobrir casos como valores fora do domínio esperado (`dominio-indicadores.parquet`
-   do dataset da ANEEL) que exigem julgamento.
+O supervisor checa: `linhas_preservadas` (nada perdido/adicionado no
+pass-through Bronze→Silver), `schema_consistente` (todas as linhas com o
+mesmo conjunto de colunas) e, opcionalmente, `colunas_esperadas` (só ativa
+se `expected_columns` for configurado em `config.yaml` -- ainda vazio hoje,
+porque o schema real dos resources Parquet nunca foi inspecionado contra
+dado ao vivo; preencher na primeira execução real).
 
-Não decidido ainda -- revisar antes de implementar `transform_impl.py` para
-essas duas fontes.
+Se no futuro aparecer um caso real de julgamento semântico (ex.: detectar
+padrão anômalo que exija interpretação, não só validação de domínio), dá
+para trocar por um `TransformSupervisor` LLM sem quebrar a interface.
 
 ## Resource escolhido para DEC/FEC
 
