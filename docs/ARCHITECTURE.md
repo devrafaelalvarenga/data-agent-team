@@ -322,6 +322,21 @@ class Harness:
         )
 ```
 
+> **Convenção das métricas (implementada em `core/harness/metrics.py`):** cada
+> métrica lê **só `SilverRecord.metadata`**, nunca a forma de
+> `transformed_content` (específica de cada `TransformSpecialist`) — assim as
+> métricas de `core/` ficam genéricas entre projetos. Chaves de metadata
+> usadas pelas 3 métricas iniciais: `transform_approved` (bool, setado pelo
+> orquestrador com o resultado de `TransformSupervisor.review()` antes de
+> entregar o `SilverRecord` ao Harness — é aqui que entra o "1 métrica de
+> LLM-as-judge": o julgamento já aconteceu na Task 2, o Harness só agrega),
+> `chunk_sizes` (`list[int]`, tamanho de cada chunk final em caracteres,
+> populado pelo `TransformSpecialist`), `chunk_size_min`/`chunk_size_max`
+> (opcionais por registro, senão usa defaults do módulo), e
+> `expected_metadata_fields` (`list[str]`, opcional, senão usa um default
+> genérico). Amostra vazia → 0.0 (fail-closed, mesmo princípio do
+> `ExtractSupervisor`).
+
 ```python
 # core/load/base.py
 from datetime import datetime, timezone

@@ -3,6 +3,17 @@
 Registro de mudanças relevantes no framework e nos projetos. Ver histórico
 completo de commits com `git log` para detalhes granulares.
 
+## 25/09/2026 (2)
+
+- Adiciona `core/harness/base.py` (Harness genérico: amostragem + cálculo de
+  nota) e `core/harness/metrics.py` (`faithfulness_to_source`,
+  `chunk_size_valid`, `metadata_extracted`), registradas via `@register_metric`.
+  Convenção: métricas leem só `SilverRecord.metadata`, nunca a forma de
+  `transformed_content` (específica de cada projeto) -- mantém as métricas de
+  `core/` genéricas. `faithfulness_to_source` agrega o resultado que o
+  orquestrador grava em `metadata["transform_approved"]` a partir do
+  `TransformSupervisor.review()` -- não faz uma segunda chamada de LLM.
+
 ## 25/09/2026
 
 - Adiciona `core/providers/google_ai_studio.py`: provider Gemini (SDK
