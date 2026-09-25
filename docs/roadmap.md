@@ -12,10 +12,10 @@ Baseado na seção "Roadmap de implementação sugerido" de `docs/ARCHITECTURE.m
 6. `core/providers/google_ai_studio.py` — provider Gemini registrado (`google_ai_studio`)
 7. `projects/ai-energy-data-project/transform_impl.py` — chunking por seção numerada do PRODIST + limpeza/checagem de fidelidade via LLM
 8. `core/harness/base.py` + `core/harness/metrics.py` — Harness genérico com amostragem (`random`, outras estratégias levantam `NotImplementedError`) + 3 métricas registradas (`faithfulness_to_source`, `chunk_size_valid`, `metadata_extracted`), todas lendo só `SilverRecord.metadata` (convenção documentada no módulo) para ficarem genéricas entre projetos
+9. `core/load/base.py` — LoadGate genérico: grava em Gold se `EvalResult.passed`, senão gera um `AuditRecord` por `SilverRecord` e grava em Auditoria. Sempre determinístico.
 
 ## Em andamento / pendente
 
-9. `core/load/base.py` — LoadGate (gold/auditoria)
 10. `core/orchestration/dag_factory.py` — gera DAG do Airflow a partir do `config.yaml`, resolvendo o registry; também é quem deve popular `SilverRecord.metadata["transform_approved"]` com o resultado de `TransformSupervisor.review()` antes de entregar ao Harness (convenção de `core/harness/metrics.py`)
 11. Testes de integração cobrindo o caminho real (rede) para ANEEL e Google AI Studio — não foi possível no ambiente de desenvolvimento (sandbox sem saída de rede via `requests`)
 12. `projects/ai-energy-data-project/config.yaml` — ainda não existe como arquivo real, só como exemplo ilustrativo em `docs/ARCHITECTURE.md`

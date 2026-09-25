@@ -3,6 +3,13 @@
 Registro de mudanças relevantes no framework e nos projetos. Ver histórico
 completo de commits com `git log` para detalhes granulares.
 
+## 25/09/2026 (3)
+
+- Adiciona `core/load/base.py`: `LoadGate` genérico (Task 4) -- grava em Gold
+  se `EvalResult.passed`, senão gera um `AuditRecord` por `SilverRecord`
+  (com `rejected_at` ISO 8601) e grava em Auditoria. 100% determinístico,
+  conforme especificado em `docs/ARCHITECTURE.md`.
+
 ## 25/09/2026 (2)
 
 - Adiciona `core/harness/base.py` (Harness genérico: amostragem + cálculo de
