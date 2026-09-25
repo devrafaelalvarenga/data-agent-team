@@ -3,12 +3,14 @@
 Fontes (ver docs/ARCHITECTURE.md):
 - prodist_pdf: PRODIST Módulo 8, documento normativo estático publicado
   pela ANEEL -- baixado de uma URL fixa (config.yaml).
-- aneel_drp_drc_csv / aneel_dec_fec_csv: publicados no Portal de Dados
-  Abertos da ANEEL (https://dadosabertos.aneel.gov.br), que é um CKAN.
-  O resource é resolvido dinamicamente via `package_show` da API do CKAN,
-  em vez da URL de download ser hardcoded: o UUID do resource muda quando
-  a ANEEL republica o dataset, mas o slug do dataset e o nome do resource
-  são estáveis -- ambos vêm do config.yaml do projeto.
+- aneel_drp_drc_parquet / aneel_dec_fec_parquet: publicados no Portal de
+  Dados Abertos da ANEEL (https://dadosabertos.aneel.gov.br), que é um CKAN.
+  Parquet em vez de CSV: schema tipado embutido (sem precisar declarar tipo
+  de coluna via config.yaml) e carga nativa mais eficiente no BigQuery. O
+  resource é resolvido dinamicamente via `package_show` da API do CKAN, em
+  vez da URL de download ser hardcoded: o UUID do resource muda quando a
+  ANEEL republica o dataset, mas o slug do dataset e o nome do resource são
+  estáveis -- ambos vêm do config.yaml do projeto.
 
 Este módulo vive numa pasta kebab-case (`projects/ai-energy-data-project/`),
 que não é um nome de pacote Python válido para import por ponto. Ele é
@@ -19,11 +21,12 @@ carregado por caminho (importlib) por quem for orquestrar o pipeline
 
 from __future__ import annotations
 
-import csv
+import datetime as dt
 import io
-from datetime import UTC, datetime
+from decimal import Decimal
 from email.utils import parsedate_to_datetime
 
+import pyarrow.parquet as pq
 import requests
 
 from core.contracts import BronzeRecord
@@ -32,12 +35,29 @@ from core.extract.base import ExtractSpecialist
 CKAN_API_BASE = "https://dadosabertos.aneel.gov.br/api/3/action"
 
 
-class AneelCsvExtractSpecialist(ExtractSpecialist):
-    """Baixa um resource CSV de um dataset do Portal de Dados Abertos da ANEEL.
+def _json_safe_value(value):
+    """pyarrow devolve `datetime.date`/`datetime.datetime`/`Decimal` para
+    colunas de data e numéricas de precisão fixa -- nenhum dos dois é
+    JSON-safe (necessário para trafegar em BronzeRecord.raw_content via XCom,
+    ver core/orchestration/serialization.py)."""
+    if isinstance(value, (dt.datetime, dt.date, dt.time)):
+        return value.isoformat()
+    if isinstance(value, Decimal):
+        return float(value)
+    return value
 
-    Usado tanto para 'aneel_drp_drc_csv' quanto para 'aneel_dec_fec_csv' --
-    estruturalmente é a mesma operação; o que muda (dataset, resource) vem
-    do config.yaml do projeto.
+
+def _json_safe_row(row: dict) -> dict:
+    return {key: _json_safe_value(value) for key, value in row.items()}
+
+
+class AneelParquetExtractSpecialist(ExtractSpecialist):
+    """Baixa um resource Parquet de um dataset do Portal de Dados Abertos da
+    ANEEL.
+
+    Usado tanto para 'aneel_drp_drc_parquet' quanto para
+    'aneel_dec_fec_parquet' -- estruturalmente é a mesma operação; o que
+    muda (dataset, resource) vem do config.yaml do projeto.
     """
 
     def __init__(
@@ -56,7 +76,8 @@ class AneelCsvExtractSpecialist(ExtractSpecialist):
         resource = self._resolve_resource()
         response = requests.get(resource["url"], timeout=self.timeout)
         response.raise_for_status()
-        rows = list(csv.DictReader(io.StringIO(response.text)))
+        table = pq.read_table(io.BytesIO(response.content))
+        rows = [_json_safe_row(row) for row in table.to_pylist()]
         return BronzeRecord(
             source=self.source_name,
             raw_content=rows,
@@ -78,9 +99,9 @@ class AneelCsvExtractSpecialist(ExtractSpecialist):
         resources = response.json()["result"]["resources"]
         for resource in resources:
             if resource["name"] == self.resource_name:
-                if resource["format"].upper() != "CSV":
+                if resource["format"].upper() != "PARQUET":
                     raise ValueError(
-                        f"resource '{self.resource_name}' não é CSV "
+                        f"resource '{self.resource_name}' não é Parquet "
                         f"(formato: {resource['format']})"
                     )
                 return resource
@@ -93,7 +114,7 @@ class AneelCsvExtractSpecialist(ExtractSpecialist):
     def _resolve_updated_at(resource: dict) -> str:
         updated_at = resource.get("last_modified") or resource.get("created")
         if not updated_at:
-            return datetime.now(UTC).isoformat()
+            return dt.datetime.now(dt.UTC).isoformat()
         if updated_at.endswith("Z") or "+" in updated_at:
             return updated_at
         return f"{updated_at}+00:00"
@@ -126,5 +147,5 @@ class ProdistPdfExtractSpecialist(ExtractSpecialist):
     @staticmethod
     def _parse_http_date(value: str | None) -> str:
         if not value:
-            return datetime.now(UTC).isoformat()
-        return parsedate_to_datetime(value).astimezone(UTC).isoformat()
+            return dt.datetime.now(dt.UTC).isoformat()
+        return parsedate_to_datetime(value).astimezone(dt.UTC).isoformat()

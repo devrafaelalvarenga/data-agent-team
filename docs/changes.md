@@ -3,6 +3,20 @@
 Registro de mudanças relevantes no framework e nos projetos. Ver histórico
 completo de commits com `git log` para detalhes granulares.
 
+## 25/09/2026 (5)
+
+- Troca `AneelCsvExtractSpecialist` por `AneelParquetExtractSpecialist`
+  (`projects/ai-energy-data-project/extract_impl.py`): fontes ANEEL agora em
+  Parquet, não CSV -- schema tipado embutido, carga nativa mais eficiente no
+  BigQuery. Converte colunas de data/decimal do parquet para ISO
+  string/float (não são JSON-safe por padrão, e `raw_content` precisa
+  trafegar via XCom). Adiciona `pyarrow` como dependência.
+- `config.yaml`: fontes renomeadas para `aneel_drp_drc_parquet`/
+  `aneel_dec_fec_parquet`, resource de DEC/FEC trocado de
+  `indicadores-continuidade-coletivos-limite` (só limites regulatórios) para
+  `indicadores-continuidade-coletivos-2020-2029.parquet` (série histórica de
+  valores medidos) -- decisão do usuário, resolve pendência anterior.
+
 ## 25/09/2026 (4)
 
 - Adiciona `core/orchestration/dag_factory.py` (encadeia as 4 Tasks numa DAG

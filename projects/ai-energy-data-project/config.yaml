@@ -3,16 +3,20 @@
 # projects/ai-energy-data-project/docs/architecture.md (decisões específicas).
 #
 # Só a pipeline de prodist_pdf está completa (as 4 Tasks implementadas).
-# aneel_drp_drc_csv e aneel_dec_fec_csv têm Extract pronto, mas ainda não têm
-# TransformSpecialist -- ver docs/architecture.md deste projeto.
+# aneel_drp_drc_parquet e aneel_dec_fec_parquet têm Extract pronto, mas ainda
+# não têm TransformSpecialist -- ver docs/architecture.md deste projeto.
+#
+# Fontes ANEEL em Parquet (não CSV): schema tipado embutido -- schema_rules
+# do supervisor não precisa mais declarar tipo de coluna manualmente -- e
+# carga nativa mais eficiente no BigQuery.
 
 project_name: ai-energy-data-project
 
 extract:
   sources:
     - prodist_pdf
-    - aneel_drp_drc_csv
-    - aneel_dec_fec_csv
+    - aneel_drp_drc_parquet
+    - aneel_dec_fec_parquet
 
   prodist_pdf:
     url: "https://git.aneel.gov.br/publico/centralconteudo/-/raw/main/procreg/prodist/modulo08/aren20251137_Prodist_modulo_8_v14.pdf"
@@ -24,9 +28,9 @@ extract:
       completeness_min_ratio: 1.0 # PDF normativo: ou baixou completo, ou reprova
       freshness_max_hours: 8760 # 1 ano -- PRODIST muda raramente
 
-  aneel_drp_drc_csv:
+  aneel_drp_drc_parquet:
     dataset_slug: "indicadores-de-conformidade-do-nivel-de-tensao-em-regime-permanente"
-    resource_name: "indicadores-conformidade-nivel-tensao"
+    resource_name: "indicadores-conformidade-nivel-tensao.parquet"
     bronze_destination: "bigquery.energy_quality.bronze_drp_drc"
     supervisor:
       schema_rules:
@@ -34,9 +38,9 @@ extract:
       completeness_min_ratio: 0.95
       freshness_max_hours: 2160 # ~90 dias -- dado trimestral
 
-  aneel_dec_fec_csv:
+  aneel_dec_fec_parquet:
     dataset_slug: "indicadores-coletivos-de-continuidade-dec-e-fec"
-    resource_name: "indicadores-continuidade-coletivos-limite"
+    resource_name: "indicadores-continuidade-coletivos-2020-2029.parquet" # série histórica de valores medidos (não o resource "-limite", que só tem os limites regulatórios)
     bronze_destination: "bigquery.energy_quality.bronze_dec_fec"
     supervisor:
       schema_rules:

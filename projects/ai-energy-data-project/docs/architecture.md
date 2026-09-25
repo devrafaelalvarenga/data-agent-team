@@ -8,26 +8,36 @@ documento cobre só decisões específicas deste projeto.
 | Fonte | Extract | Transform | Harness/Load | DAG |
 |---|---|---|---|---|
 | `prodist_pdf` | ✅ `ProdistPdfExtractSpecialist` | ✅ `PdistChunkingTransformSpecialist` + `PdistFidelityTransformSupervisor` | ✅ genérico (`core/harness`, `core/load`) | ✅ `dags/ai_energy_data_project.py` |
-| `aneel_drp_drc_csv` | ✅ `AneelCsvExtractSpecialist` | ❌ pendente | -- | ❌ pendente |
-| `aneel_dec_fec_csv` | ✅ `AneelCsvExtractSpecialist` | ❌ pendente | -- | ❌ pendente |
+| `aneel_drp_drc_parquet` | ✅ `AneelParquetExtractSpecialist` | ❌ pendente | -- | ❌ pendente |
+| `aneel_dec_fec_parquet` | ✅ `AneelParquetExtractSpecialist` | ❌ pendente | -- | ❌ pendente |
 
-## Pendência: Transform das fontes CSV (DRP/DRC, DEC/FEC)
+## Extract das fontes ANEEL: Parquet, não CSV
 
-As duas fontes CSV ainda não têm `TransformSpecialist`. Decisão a tomar antes
-de implementar a DAG delas: dado tabular sem ambiguidade textual pode não
+Trocado de CSV para Parquet em 25/09/2026: schema tipado embutido (não
+precisa mais declarar tipo de coluna manualmente em `schema_rules` do
+`config.yaml`) e carga nativa mais eficiente no BigQuery -- ver
+`docs/integrations/aneel-dados-abertos.md`. `AneelParquetExtractSpecialist`
+converte colunas de data/decimal do parquet para ISO string/float, já que
+não são JSON-safe por padrão e `raw_content` precisa trafegar via XCom.
+
+## Pendência: Transform das fontes ANEEL (DRP/DRC, DEC/FEC)
+
+As duas fontes ainda não têm `TransformSpecialist`. Decisão a tomar antes de
+implementar a DAG delas: dado tabular sem ambiguidade textual pode não
 precisar de julgamento semântico de LLM na Task 2 (diferente do PDF do
 PRODIST, que envolve limpar texto extraído e decidir o que é ruído de PDF vs.
 conteúdo normativo). Duas opções:
 
-1. **Transform determinístico** (Python puro: valida tipos de coluna, calcula
+1. **Transform determinístico** (Python puro: valida schema, calcula
    `completeness_ratio`, estrutura em `SilverRecord`) -- mais simples, mais
    barato, mas quebraria a regra "Task 2 sempre tem LLM" do `docs/ARCHITECTURE.md`
    se essa regra for lida literalmente. Argumento a favor: a regra
    não-negociável do projeto é "LLM só onde há julgamento semântico real" --
-   se não há julgamento semântico real num CSV tabular já estruturado, forçar
-   LLM aqui contradiria o próprio princípio.
+   se não há julgamento semântico real num dado tabular já estruturado (e
+   agora já tipado via Parquet), forçar LLM aqui contradiria o próprio
+   princípio.
 2. **Transform com LLM mesmo assim**, para manter uniformidade entre fontes e
-   cobrir casos como valores fora do domínio esperado (`dominio-indicadores.csv`
+   cobrir casos como valores fora do domínio esperado (`dominio-indicadores.parquet`
    do dataset da ANEEL) que exigem julgamento.
 
 Não decidido ainda -- revisar antes de implementar `transform_impl.py` para
@@ -35,11 +45,10 @@ essas duas fontes.
 
 ## Resource escolhido para DEC/FEC
 
-`indicadores-continuidade-coletivos-limite` (limites regulatórios) foi o
-resource configurado em `config.yaml`, não a série histórica de valores
-medidos (`indicadores-continuidade-coletivos-2020-2029`, um ZIP). Reavaliar
-qual resource é realmente necessário para o caso de uso antes de ligar essa
-fonte numa DAG -- ver `docs/integrations/aneel-dados-abertos.md`.
+`indicadores-continuidade-coletivos-2020-2029.parquet` (série histórica de
+valores medidos 2020-2029) -- decisão do usuário em 25/09/2026, resolvendo a
+pendência anterior. Não é `indicadores-continuidade-coletivos-limite`, que
+só tem os limites regulatórios, não os valores medidos.
 
 ## `gold_writer`/`audit_writer` são placeholders
 
