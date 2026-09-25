@@ -19,6 +19,11 @@ data/raw/
 .astro/
 airflow_settings.yaml
 logs/
+astro
+airflow-webserver.pid
+webserver_config.py
+airflow.cfg
+airflow.db
 
 # Notebooks
 .ipynb_checkpoints/

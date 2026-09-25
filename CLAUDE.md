@@ -18,7 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `docs/roadmap.md` | Tarefas pendentes, em andamento e concluídas | 25/09/2026 |
 | `docs/changes.md` | Changelog de todas as alterações relevantes | 25/09/2026 |
 | `docs/integrations/README.md` | Índice de todas as integrações externas documentadas | 25/09/2026 |
-| `projects/<nome>/docs/architecture.md` | Decisões técnicas específicas de cada projeto (um por projeto) | — |
+| `projects/<nome>/docs/architecture.md` | Decisões técnicas específicas de cada projeto (um por projeto) | 25/09/2026 (ai-energy-data-project) |
 
 > Regra: toda vez que um arquivo acima for alterado, atualizar imediatamente o campo "Atualizado em" com a data (ex: `24/09/2026`). Ao final de cada sessão, checar se algum arquivo do índice foi modificado e confirmar que o timestamp reflete isso.
 
@@ -57,10 +57,11 @@ O primeiro projeto é `projects/ai-energy-data-project/` (qualidade de energia e
   - Cloud Storage: blobs (ex: PDFs de fontes normativas)
   - BigQuery: dados tabulares em todas as camadas (bronze/silver/gold/auditoria)
   - Google AI Studio (não Vertex AI): geração via Gemini, cota gratuita diária
-- **Rodar testes:** `uv run pytest tests/ -v`
+- **Rodar testes (host):** `uv run pytest tests/ -v` — ignora `tests/dags/` (precisa de `airflow`, ver `docs/integrations/apache-airflow-astro.md`)
 - **Lint/format:** `uv run ruff check . --fix && uv run ruff format .`
-- **Subir ambiente localmente:** `astro dev start`
+- **Subir ambiente localmente:** `astro dev start` (requer Docker)
 - **Parar ambiente:** `astro dev stop`
+- **Testar DAGs (dentro do container):** `astro dev pytest`
 
 -----
 

@@ -1,0 +1,12 @@
+# Dependências Python instaladas DENTRO do container do Astro Runtime (Airflow +
+# providers), separado do ambiente de desenvolvimento local (uv, ver pyproject.toml
+# e uv.lock na raiz). Mantido em sincronia manual com [project.dependencies] do
+# pyproject.toml -- Airflow já vem com suas próprias dependências pinadas na
+# imagem base, este arquivo só adiciona o que o código de core/ e projects/ precisa.
+requests>=2.31.0
+google-cloud-storage>=2.16.0
+google-cloud-bigquery>=3.25.0
+google-genai>=0.1.0
+pypdf>=4.0.0
+pyyaml>=6.0
+python-dotenv>=1.0.0

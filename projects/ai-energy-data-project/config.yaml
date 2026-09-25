@@ -1,0 +1,68 @@
+# config.yaml -- ai-energy-data-project
+# Ver docs/ARCHITECTURE.md ("Exemplo de config.yaml por projeto") e
+# projects/ai-energy-data-project/docs/architecture.md (decisões específicas).
+#
+# Só a pipeline de prodist_pdf está completa (as 4 Tasks implementadas).
+# aneel_drp_drc_csv e aneel_dec_fec_csv têm Extract pronto, mas ainda não têm
+# TransformSpecialist -- ver docs/architecture.md deste projeto.
+
+project_name: ai-energy-data-project
+
+extract:
+  sources:
+    - prodist_pdf
+    - aneel_drp_drc_csv
+    - aneel_dec_fec_csv
+
+  prodist_pdf:
+    url: "https://git.aneel.gov.br/publico/centralconteudo/-/raw/main/procreg/prodist/modulo08/aren20251137_Prodist_modulo_8_v14.pdf"
+    bronze_destination: "gcs://ai-energy-data-bucket/bronze/prodist/"
+    supervisor:
+      schema_rules:
+        content_type: str
+        byte_size: int
+      completeness_min_ratio: 1.0 # PDF normativo: ou baixou completo, ou reprova
+      freshness_max_hours: 8760 # 1 ano -- PRODIST muda raramente
+
+  aneel_drp_drc_csv:
+    dataset_slug: "indicadores-de-conformidade-do-nivel-de-tensao-em-regime-permanente"
+    resource_name: "indicadores-conformidade-nivel-tensao"
+    bronze_destination: "bigquery.energy_quality.bronze_drp_drc"
+    supervisor:
+      schema_rules:
+        row_count: int
+      completeness_min_ratio: 0.95
+      freshness_max_hours: 2160 # ~90 dias -- dado trimestral
+
+  aneel_dec_fec_csv:
+    dataset_slug: "indicadores-coletivos-de-continuidade-dec-e-fec"
+    resource_name: "indicadores-continuidade-coletivos-limite"
+    bronze_destination: "bigquery.energy_quality.bronze_dec_fec"
+    supervisor:
+      schema_rules:
+        row_count: int
+      completeness_min_ratio: 0.95
+      freshness_max_hours: 8760 # dado anual
+
+transform:
+  prodist_pdf:
+    chunking_strategy: por_secao_numerada
+    llm_provider: google_ai_studio # resolvido via PROVIDER_REGISTRY (core/registry.py)
+    llm_model: gemini-flash-latest
+    silver_destination: "bigquery.energy_quality.silver_prodist_chunks"
+    silver_vector_destination: "chroma://local/prodist_chunks"
+
+harness:
+  prodist_pdf:
+    sample_size: 30
+    sample_strategy: random
+    metrics: # cada nome resolvido via METRIC_REGISTRY (core/registry.py)
+      - faithfulness_to_source
+      - chunk_size_valid
+      - metadata_extracted
+    threshold: 0.8
+
+load:
+  prodist_pdf:
+    gold_destination: "bigquery.energy_quality.gold"
+    audit_destination: "bigquery.energy_quality.audit"
