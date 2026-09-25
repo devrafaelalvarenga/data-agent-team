@@ -15,9 +15,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | Arquivo | Descrição | Atualizado em |
 |---|---|---|
 | `docs/ARCHITECTURE.md` | Arquitetura do time de agentes: Tasks 1-4, contratos, registry, config.yaml | 24/09/2026 |
-| `docs/roadmap.md` | Tarefas pendentes, em andamento e concluídas | — |
-| `docs/changes.md` | Changelog de todas as alterações relevantes | — |
-| `docs/integrations/README.md` | Índice de todas as integrações externas documentadas | — |
+| `docs/roadmap.md` | Tarefas pendentes, em andamento e concluídas | 25/09/2026 |
+| `docs/changes.md` | Changelog de todas as alterações relevantes | 25/09/2026 |
+| `docs/integrations/README.md` | Índice de todas as integrações externas documentadas | 25/09/2026 |
 | `projects/<nome>/docs/architecture.md` | Decisões técnicas específicas de cada projeto (um por projeto) | — |
 
 > Regra: toda vez que um arquivo acima for alterado, atualizar imediatamente o campo "Atualizado em" com a data (ex: `24/09/2026`). Ao final de cada sessão, checar se algum arquivo do índice foi modificado e confirmar que o timestamp reflete isso.
